@@ -1,0 +1,65 @@
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  TeX: { 
+      equationNumbers: { 
+            autoNumber: "all",
+            formatNumber: function (n) {return n}
+      } 
+  }
+});
+</script>
+---
+title: "linear regression"
+author: "Viet Nguyen"
+date: "March 5, 2018"
+output: html_document
+
+---
+
+### Input:  
+We have a dataset with N samples (data points) and p independent variables (features/predictor) which can be denoted as $x_{ij}$ with $i: 1 \rightarrow N$ and $j: 1 \rightarrow p$.   
+
+This can also be represented by matrix $\textbf{X}$ with $N$ rows $x_1,x_2,...,x_N$ and $p+1$ column including the $\textbf{1}$ column ($1,1,...,1$) and the $p$ columns $\mathbf{x_1},\mathbf{x_2},...,\mathbf{x_p}$  
+
+$$ \textbf{X}_{N,p+1} = 
+\begin{array}{l|l*{4}|{c}r}
+& \mathbf{x_0} & \mathbf{x_1} & \mathbf{x_2} & \mathbf{x_j} &  \mathbf{x_p}   \\
+\hline
+x_1 & 1 & x_{11} & x_{12} & \cdots & x_{1p}   \\
+x_2 & 1 & x_{21} & x_{22} & \cdots & x_{2p}   \\
+x_i & 1 & \vdots  & \vdots  & \ddots & \vdots \\
+x_N & 1 & x_{N1} & x_{N2} & \cdots & x_{Np}   \\
+\end{array}
+$$
+
+We also have target (dependent) variable $y_i$ , which can also be represented by vector $\textbf{y} = (y_1,y_2,...,y_N)^T$  
+
+### The idea:
+
+Linear model assume there is linear relationship between $\textbf{y}$ and $\textbf{X}$ such as: 
+$$\textbf{y} = \textbf{X}\beta \quad \text{or} \quad y_i = \beta_0 + \sum_{j=1}^{p}x_{ij}\beta_j\quad \text{(the general equation)}$$ 
+in which: vector coefficients $\beta = (\beta_0,\beta_1,...,\beta_p)^T$ represents the line that best fits the data  
+But it doesn't make sense if we write equation like above unless all the point $y_i$ are on a straight line. To make the model realistic, an error term is added when we express $\textbf{y}$ in the linear form of $\textbf{X}$
+$$\textbf{y} = \textbf{X}\beta + \varepsilon  \quad \text{or} \quad y_i = \beta_0 + \sum_{j=1}^{p}x_{ij}\beta_j + \varepsilon_i  $$
+assuming that:
+
+1. $\textbf{X}$ and $x_{ij}$ are fixed (non-random)
+2. $y_i$ are uncorrelated and have a constant variance $\sigma^2$ 
+3. random variable $\varepsilon \sim \mathcal{N}(0,\sigma^2)$ 
+ 
+	
+### Train the model / Estimate the coefficients:
+There are many ways to estimate beta: method of ordinary least square (OLS), method of moments, method of maximum likelihood.
+In this case, we will use the OLS method. 
+Denote: 
+1. $\hat{\textbf{y}}$ and $\hat{y_i}$ as the fitted value from the regression line 
+2. $\hat{\beta}$ and $\hat{\beta_j}$ as the estimated value of beta
+The line (with vector slope $\beta$) is the one best fits the data and the output of the model (or the predicted value) would be
+	$$\hat{\textbf{y}} = \textbf{X}\hat{\beta} \quad \text{or} \quad \hat{y_i} = \hat{\beta_0} + \sum_{j=1}^{p}x_{ij}\hat{\beta_j} $$
+	
+The model (the line with vector slopes $\beta$ that best fits the data) can be computed/estimated by minimizing residual sum-of-squares:
+	$$\text{RSS}(\beta) = (\textbf{y} - \textbf{X}\beta)^T(\textbf{y} - \textbf{X}\beta)$$
+And we have the result after differentiating w.r.t $\beta$: $$\hat{\beta} = (\textbf{X}^T\textbf{X})^{-1}\textbf{X}^T\textbf{y} $$
+
+### Intepreting the results:
+
