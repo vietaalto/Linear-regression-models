@@ -9,11 +9,10 @@ MathJax.Hub.Config({
 });
 </script>
 ---
-title: "linear regression"
+title: "Understanding and interpreting linear regression models"
 author: "Viet Nguyen"
 date: "March 5, 2018"
-output: html_document
-
+output: html_document:output_file: "some-custom-name.html"
 ---
 
 ### Input:  
@@ -63,3 +62,256 @@ And we have the result after differentiating w.r.t $\beta$: $$\hat{\beta} = (\te
 
 ### Intepreting the results:
 
+```{r}
+crime <- read.csv("crime-data.csv", stringsAsFactors = FALSE, sep = ",")
+dim(crime)
+lin <- lm(crim ~ ., data = crime)
+summary(lin)
+
+```
+
+1. Residuals: $\varepsilon = \textbf{y}-\hat{\textbf{y}}$ difference between predicted (or fitted) and actual value. This should be 5 point summary of a normal distribution, because $\varepsilon \sim \mathcal{N}(0,\sigma^2)$
+2. Estimate: $\hat{\beta} = (\hat{\beta_0},\hat{\beta_1},...,\hat{\beta_j},...,\hat{\beta_p})$
+3. Std.Error (or S): (standard error = standard deviation of a statistic of the data) standard deviation of the betas:
+$\hat{\sigma_j} = \sqrt{\text{Var}(\hat{\beta_j})}$ with $j:1\rightarrow p$  
+Noted that $$ \hat{\beta} \sim \mathcal{N}(\beta,(\textbf{X}^T\textbf{X})^{-1}\sigma^2)$$ (@elem page 66 eq 3.10)  
+
+for a simple linear regression model, where $\beta = (\beta_0,\beta_1)^T$
+$$\text{Var}(\beta_1) = \frac{\sigma^2}{\sum_{i=1}^{N}(x_i-\bar{x})^2} = 
+\frac{\sum_{i=1}^{N}(y_i-\hat{y}_i)^2}{(N-1-1)\sum_{i=1}^{N}(x_i-\bar{x})^2}$$
+(@ols, Unbiasedness and variance of betas)
+
+
+4. t-value: $t_j=\hat{\beta_j}/\hat{\sigma_j}$ or in matrix representation $t = \hat{\beta}/\sqrt{\text{Cov}(\hat{\beta})}$
+This is the standardized variables of $\hat{\beta}_j$ (similar to z-score)
+```{r}
+tstats = coef(lin)/ sqrt(diag(vcov(lin)))
+summary(lin)$coefficients[,3] # equivalent to above
+
+```
+
+t-stats vs z-score:
+- t-stats (t-distribution): used when unknown population variance, insufficiently samples ($N < 30$) (in which t-distribution become same as standard normal distribution)
+- z-score (normal distribution): used when known population variance, large samples ($N > 30$) (in which t-distribution become same as standard normal distribution)
+5. Pr(>|t|): p-value
+- Null hypothesis: $H_0$: $\beta_j = 0$ or t-value = 0
+- Input: t-stats as the support (horizontal axe) of the t-distribution
+- Output: probability, CDF, of returning number with greater absolute value than that of the t-stats (smaller in lower tail and greater in upper tail)
+
+http://www.statisticshowto.com/probability-and-statistics/hypothesis-testing/t-score-vs-z-score/
+
+https://math.stackexchange.com/questions/1350635/when-do-i-use-a-z-score-vs-a-t-score-for-confidence-intervals
+
+```{r}
+2 * pt(abs(tstats), df = df.residual(lin), lower.tail = FALSE)
+#summary(lin)$coefficients[,4]
+```
+- So we compute the upper tail probability of achieving the $t$ values we did from a $t$ distribution with degrees of freedom equal to the residual degrees of freedom of the model. This represents the probability of achieving a $t$ value greater than the absolute values of the observed $t$s. It is multiplied by 2, because of course $t$ can be large in the negative direction too. (@interpret1)
+
+- t-distributions are defined by the DF (degree of freedom) - sample size
+- **Intepretation**: The smaller the p-value (more significant), the greater the distance from the t-statistics (the $\beta_j$ likewise) to 0 (the t-distribution mean) - the more explanatory power of the feature
+- **Intepretation**: We should omit variables with large (insignificant) p-value
+- Why don't use the $\beta_j$ directly but use the t-stats ? A: need to adjust for its variance
+6. Residual standard error: $\sigma$ (noted that $\varepsilon \sim \mathcal{N}(0,\sigma^2)$)
+(standard error = standard deviation of a statistic of the data) standard deviation of the residuals  
+
+- Typically one estimate the variance $\sigma^2$ by 
+$$ \hat{\sigma}^2 = \frac{1}{N-p-1} \sum_{i=1}^{N}(y_i-\hat{y}_i)^2$$ (@elem page 66 eq 3.8)
+
+- Also $$ (N-p-1)\hat{\sigma}^2 \sim \sigma^2\mathcal{X}_{N-p-1}^2$$ (@elem page 66  eq 3.11) 
+a chi-squared distribution with $N-p-1$ degrees of freedom.  
+
+More at (@ols, Expected value of sigma & Maximum likelihood approach)
+
+- **Interpretation**: to assess the precision. the smaller the better. It (smaller value) also indicates that the observations are closer to the fitted line.
+7. Multiple R-squared: 
+- $\bar{y} = \frac{1}{N}\sum_{i=1}^{N}y_i$
+- Total sum of squares (proportional to the variance of the data) *(actual value vs mean)*
+$$TSS = SS_{tot} = \sum_i(y_i-\bar{y})^2$$
+- The regression sum of squares, or explained sum of squares *(regression fitted value vs mean)*
+$$ESS = SS_{reg} = \sum_i(\hat{y_i}-\bar{y})^2$$
+- The sum of squares of residuals/error of prediction *(actual vs fitted)*
+$$RSS = SS_{res} = \sum_i(y_i-\hat{y_i})^2 = \sum_i\varepsilon_i^2$$
+$$RSS = SS_{res} = (\textbf{y} - \textbf{X}\hat\beta)^T(\textbf{y} - \textbf{X}\hat\beta) = \hat\varepsilon^t\hat\varepsilon = \left\Vert\varepsilon\right\Vert^2$$
+- R-square (coefficient of determination) *(1 - residual/ sth)*
+$$ R^2 = 1 - \frac{SS_{res}}{SS_{tot}}
+       = 1 - \frac{\sum_i(y_i-\hat{y_i})^2}{\sum_i(y_i-\bar{y})^2}$$
+- We have $$ TSS = RSS + ESS - 2\textbf{y}^T\bar{y} + 2\mathbf{\hat{y}}^T\bar{y}$$
+https://en.wikipedia.org/wiki/Explained_sum_of_squares#Partitioning_in_the_general_OLS_model  
+
+
+- Relation $TSS = RSS + ESS$ if and only if:
++ $\textbf{y}^T\bar{y} = \mathbf{\hat{y}}^T\bar{y}$ or equivalently $\sum_i(y_i-\hat{y_i}) = \sum_i\varepsilon_i = 0$
++ Always hold true with simple linear regression where $\beta = (\beta_0,\beta_1)^T$
+
+(@rsquare12)
+
+- **Interpretation**: Basically, if residuals sum of squares smaller , the closer $R^2$ to 1, the better he linear regression fit the data
+- For R-squared, you want the regression model to explain higher percentages of the variance. Higher R-squared values indicate that the data points are closer to the fitted values
+
+- Key Limitations of R-squared: 
++ R-squared cannot determine whether the coefficient estimates and predictions are biased.
++ R-squared does not indicate whether a regression model is adequate. You can have a low R-squared value for a good model, or a high R-squared value for a model that does not fit the data!
++ While higher R-squared values are good, they don't tell you how far the data points are from the regression line. Additionally, R-squared is valid for only linear models.
+
+- Low R-squared: not really bad
++ statistically significant predictors can draw important conclusion
+
+- High R-square: needed for prediction. However, not really good. Example: http://blog.minitab.com/blog/adventures-in-statistics-2/regression-analysis-how-do-i-interpret-r-squared-and-assess-the-goodness-of-fit
++ You might be overfitting your model
+Ned to check residual plot also !
+
+8. Adjusted R-squared: is computed as $$ 1 - (1 - R^2) \frac{n-1}{n-p-1}$$
+The adjusted $R^2$ is the same thing as $R^2$, but adjusted for the complexity (i.e. the number of parameters) of the model. Given a model with a single parameter, with a certain $R^2$, if we add another parameter to this model, the $R^2$ of the new model has to increase, even if the added parameter has no statistical power. The adjusted $R^2$ accounts for this by including the number of parameters in the model. (@interpret1)
+9. F-statistic:  F-test of overall significance
+$$F = \frac{(RSS_0 - RSS_1)/(p_1-p_0)}{RSS_1/(N-p-1)}$$
+(@elem eq 3.13 page 67)
+The hypotheses for the F-test of the overall significance are as follows:
+
+- Null hypothesis: The fit of the intercept-only model and your model are equal.
+- Alternative hypothesis: The fit of the intercept-only model is significantly reduced compared to your model.
+
+Note: F-distribution has 2 parameters: df1 and df2
+If the P value for the F-test of overall significance test is less than your significance level, you can reject the null-hypothesis and conclude that your model provides a better fit than the intercept-only model. In this case, the regression model predicts the response variable better than the mean of the response.
+
+
+http://blog.minitab.com/blog/adventures-in-statistics-2/what-is-the-f-test-of-overall-significance-in-regression-analysis
+10. Confidence intervals (of the estimates) (The distance equals the critical t-value * standard error of the mean)
+```{r}
+confint(lin,colnames(crime)[-1],level = 0.95)
+```
+
+https://onlinecourses.science.psu.edu/stat414/node/280
+
+- **Interpretation**: If the confidence interval does not contain the null hypothesis value, the results are statistically significant.
+11. Residual plot
+```{r}
+plot(lin)
+```
+Ideally residual plot should be
+(1) they're pretty symmetrically distributed, tending to cluster towards the middle of the plot
+(2) they're clustered around the lower single digits of the y-axis (e.g., 0.5 or 1.5, not 30 or 150)
+(3) in general there aren't clear patterns (@residual1)
+
+It seems that in this case there is a pattern in the residual plot: residuals tend to be negative when fitted values range from 0 to 10
+
+The non-random pattern in the residuals indicates that the deterministic portion (predictor variables) of the model is not capturing some explanatory information that is "leaking" into the residuals.
+Possibilities include:
+
+- A missing variable
+- A missing higher-order term of a variable in the model to explain the curvature
+- A missing interaction between terms already in the model (@residual2)
+
+12. ANOVA
+
+```{r}
+anova(lin)
+```
+
+
+### Additional material:
+http://blog.minitab.com/blog/adventures-in-statistics-2/regression-analysis-tutorial-and-examples  
+http://reliawiki.org/index.php/Simple_Linear_Regression_Analysis  
+
+
+### References:
+
+---
+references:
+- id: elem
+  title: The Elements of Statistical Learning
+  author:
+  - family: Hastie, Trevor
+    given: Tibshirani
+  container-title: 
+  volume: 
+  URL: 'https://web.stanford.edu/~hastie/Papers/ESLII.pdf'
+  DOI: 
+  issue: 
+  publisher: 
+  page: 
+  type: article-journal
+  issued:
+    year: 
+    month: 
+- id: interpret1
+  title: interpretation-of-rs-lm-output
+  author:
+  - family: Gavin Simpson
+    given: 
+  container-title: stackoflow
+  volume: 
+  URL: 'https://stats.stackexchange.com/questions/5135/interpretation-of-rs-lm-output'
+  DOI: 
+  issue: 
+  publisher: 
+  page: 
+  type: article-journal
+  issued:
+    year: 
+    month: 
+- id: residual1
+  title: interpretation-of-residual-plot
+  author:
+  - family: statwing
+    given: 
+  container-title: statwing
+  volume: 
+  URL: 'http://docs.statwing.com/interpreting-residual-plots-to-improve-your-regression/'
+  DOI: 
+  issue: 
+  publisher: 
+  page: 
+  type: article-journal
+  issued:
+    year: 
+    month:
+- id: residual2
+  title: interpretation-of-residual-plot
+  author:
+  - family: minitab
+    given: 
+  container-title: minitab
+  volume: 
+  URL: 'http://blog.minitab.com/blog/adventures-in-statistics-2/why-you-need-to-check-your-residual-plots-for-regression-analysis'
+  DOI: 
+  issue: 
+  publisher: 
+  page: 
+  type: article-journal
+  issued:
+    year: 
+    month:
+- id: ols
+  title: Proofs involving ordinary least squares
+  author:
+  - family: wikipedia-ols
+    given: 
+  container-title: wikipedia1
+  volume: 
+  URL: 'https://en.wikipedia.org/wiki/Proofs_involving_ordinary_least_squares'
+  DOI: 
+  issue: 
+  publisher: 
+  page: 
+  type: article-journal
+  issued:
+    year: 
+    month:
+- id: rsquare12
+  title: Coefficient_of_determination
+  author:
+  - family: wikipedia-rsquare
+    given: 
+  container-title: wikipedia2
+  volume: 
+  URL: 'https://en.wikipedia.org/wiki/Coefficient_of_determination'
+  DOI: 
+  issue: 
+  publisher: 
+  page: 
+  type: article-journal
+  issued:
+    year: 
+    month:
+---
